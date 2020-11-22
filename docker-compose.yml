@@ -1,0 +1,68 @@
+version: '3.8'
+services:
+  homeassistant:
+    container_name: home-assistant
+    image: homeassistant/home-assistant:stable
+    volumes:
+      - /home/pi/homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - influxdb
+  influxdb:
+    container_name: influxdb
+    image: influxdb
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /home/pi/influxdb/db:/var/lib/influxdb
+    ports:
+      - "8086:8086"
+  nodered:
+    container_name: node-red
+    image: nodered/node-red
+    ports:
+      - "1880:1880"
+    volumes:
+      - /home/pi/nodered_data:/data
+    depends_on:
+      - homeassistant
+    environment:
+      - TZ=${TZ}
+    user: root
+    restart: unless-stopped
+  cups:
+    container_name: rpi-cups
+    image: lemariva/rpi-cups
+    ports:
+      - "631:631"
+    volumes:
+      - /var/run/dbus:/var/run/dbus
+      - /dev/bus/usb:/var/bus/usb
+    restart: unless-stopped
+  adb:
+    container_name: adb
+    image: gounthar/docker-adb:stretch.armv7
+    ports:
+      - "5037:5037"
+    volumes:
+      - /home/pi/adb_config:/config
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command: sh -c "/config/startup.sh & adb -a -P 5037 server nodaemon"
+    restart: unless-stopped
+    #vscode:
+    #container_name: vscode
+    #image: codercom/code-server
+    #volumes:
+    #  - /home/pi/homeassistant:/home/coder/project
+    #  - /home/pi/code-server:/home/coder/.local/share/code-server
+    #ports:
+    #  - "8443:8443"
+    #command: code-server --auth password --port 8443 --disable-telemetry /home/coder/project
+    #environment:
+    #  PASSWORD: "${VSCODE_PASSWORD}"
+    #restart: unless-stopped
